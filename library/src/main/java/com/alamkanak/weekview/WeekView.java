@@ -41,7 +41,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-import static com.alamkanak.weekview.WeekViewUtil.*;
+import static com.alamkanak.weekview.WeekViewUtil.isSameDay;
+import static com.alamkanak.weekview.WeekViewUtil.isWeekendDay;
+import static com.alamkanak.weekview.WeekViewUtil.today;
 
 /**
  * Created by Raquib-ul-Alam Kanak on 7/21/2014.
@@ -156,6 +158,7 @@ public class WeekView extends View {
 
     // Listeners.
     private EventClickListener mEventClickListener;
+    private HeaderClickListener mHeaderClickListener;
     private EventLongPressListener mEventLongPressListener;
     private WeekViewLoader mWeekViewLoader;
     private EmptyViewClickListener mEmptyViewClickListener;
@@ -258,7 +261,12 @@ public class WeekView extends View {
                 List<EventRect> reversedEventRects = mEventRects;
                 Collections.reverse(reversedEventRects);
                 for (EventRect event : reversedEventRects) {
-                    if (event.rectF != null && e.getX() > event.rectF.left && e.getX() < event.rectF.right && e.getY() > event.rectF.top && e.getY() < event.rectF.bottom) {
+                    if (event.rectF != null
+                            && e.getX() > event.rectF.left
+                            && e.getX() < event.rectF.right
+                            && e.getY() > event.rectF.top
+                            && e.getY() < event.rectF.bottom) {
+
                         mEventClickListener.onEventClick(event.originalEvent, event.rectF);
                         playSoundEffect(SoundEffectConstants.CLICK);
                         return super.onSingleTapConfirmed(e);
@@ -266,8 +274,24 @@ public class WeekView extends View {
                 }
             }
 
+            // If the tap was on column header, then trigger the callback.
+            if (mHeaderClickListener != null
+                    && e.getX() > mHeaderColumnWidth
+                    && e.getY() > (0)
+                    && e.getY() < (mHeaderHeight + mHeaderRowPadding)  ) {
+
+                Calendar selectedTime = getTimeFromPoint(e.getX(), e.getY());
+                if (selectedTime != null) {
+                    playSoundEffect(SoundEffectConstants.CLICK);
+                    mHeaderClickListener.onHeaderClick(selectedTime);
+                }
+            }
+
             // If the tap was on in an empty space, then trigger the callback.
-            if (mEmptyViewClickListener != null && e.getX() > mHeaderColumnWidth && e.getY() > (mHeaderHeight + mHeaderRowPadding * 2 + mHeaderMarginBottom)) {
+            if (mEmptyViewClickListener != null
+                    && e.getX() > mHeaderColumnWidth
+                    && e.getY() > (mHeaderHeight + mHeaderRowPadding * 2 + mHeaderMarginBottom)) {
+
                 Calendar selectedTime = getTimeFromPoint(e.getX(), e.getY());
                 if (selectedTime != null) {
                     playSoundEffect(SoundEffectConstants.CLICK);
@@ -1365,6 +1389,14 @@ public class WeekView extends View {
         return mEventClickListener;
     }
 
+    public void setOnHeaderClickListener (HeaderClickListener listener) {
+        this.mHeaderClickListener = listener;
+    }
+
+    public HeaderClickListener getHeaderClickListener() {
+        return mHeaderClickListener;
+    }
+
     public @Nullable MonthLoader.MonthChangeListener getMonthChangeListener() {
         if (mWeekViewLoader instanceof MonthLoader)
             return ((MonthLoader) mWeekViewLoader).getOnMonthChangeListener();
@@ -2216,6 +2248,14 @@ public class WeekView extends View {
          * @param eventRect: view containing the clicked event.
          */
         void onEventClick(WeekViewEvent event, RectF eventRect);
+    }
+
+    public interface HeaderClickListener {
+        /**
+         * Triggered when the users clicks on the header portion of the calendar.
+         * @param time: {@link Calendar} object set with the date and time of the clicked position on the view.
+         */
+        void onHeaderClick(Calendar time);
     }
 
     public interface EventLongPressListener {
